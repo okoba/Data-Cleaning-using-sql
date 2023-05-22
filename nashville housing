@@ -1,0 +1,178 @@
+select * from [dbo].[nashville]
+
+
+--Standardize sale date 
+select saledateConverted#, convert (date, saledate)
+from [dbo].[nashville]
+
+update [dbo].[nashville]
+set saledate = convert(date,saledate)
+
+
+
+alter table  [dbo].[nashville]
+add saledateConverted# date;
+
+update [dbo].[nashville]
+set saledateconverted# = Convert(date,saledate)
+
+
+ --Populate property address data 
+
+
+ select * 
+ from  [dbo].[nashville]
+ where propertyaddress is null 
+ order by parcelid
+
+ 
+
+
+SELECT a.parcelid, ISNULL(a.propertyaddress, b.propertyaddress), b.parcelid, b.propertyaddress
+FROM [dbo].[nashville] a
+JOIN [dbo].[nashville] b ON a.parcelid = b.parcelid AND a.uniqueid <> b.uniqueid
+WHERE a.propertyaddress IS NULL;
+
+
+Update a
+set propertyaddress =ISNULL(a.propertyaddress, b.propertyaddress)
+FROM [dbo].[nashville] a
+JOIN [dbo].[nashville] b ON a.parcelid = b.parcelid AND a.uniqueid <> b.uniqueid
+WHERE a.propertyaddress IS NULL;
+
+
+
+
+--breaking out address into individual columns (address,city, state)
+
+select propertyaddress
+from  [dbo].[nashville]
+ --where propertyaddress is null 
+ --order by parcelid
+
+
+ --using a substring and character index 
+
+
+
+ SELECT 
+  SUBSTRING(propertyaddress, 1, CHARINDEX(',', propertyaddress) - 1) AS address,
+  SUBSTRING(propertyaddress, CHARINDEX(',', propertyaddress) + 1, LEN(propertyaddress)) AS address
+FROM [dbo].[nashville];
+
+
+
+alter table [dbo].[nashville]
+add propertysplitaddress Nvarchar(225)
+
+update [dbo].[nashville]
+set propertysplitaddress = SUBSTRING(propertyaddress, charindex(',',propertyaddress) -1, LEN(propertyaddress))
+
+alter table [dbo].[nashville]
+add propertysplitcity Nvarchar(225)
+
+
+UPDATE [dbo].[nashville]
+SET propertysplitcity = SUBSTRING(propertyaddress, CHARINDEX(',', propertyaddress) + 1, LEN(propertyaddress))
+
+
+select * from [dbo].[nashville]
+
+--delete error columns 
+
+alter table [dbo].[nashville]
+DROP COLUMN saledateconverted;
+
+ select * from [dbo].[nashville]
+
+ --split address 
+
+SELECT 
+  SUBSTRING(OwnerAddress, 1, CHARINDEX(',', OwnerAddress) - 1) AS owneraddress1,
+  SUBSTRING(OwnerAddress, CHARINDEX(',', OwnerAddress) + 1, LEN(OwnerAddress)) AS owneraddress2
+FROM [dbo].[nashville];
+
+
+alter table [dbo].[nashville]
+add owneraddress1 Nvarchar(225)
+
+
+UPDATE [dbo].[nashville]
+SET owneraddress1 =  SUBSTRING(OwnerAddress, 1, CHARINDEX(',', OwnerAddress) - 1) 
+
+alter table [dbo].[nashville]
+add owneraddress2 Nvarchar(225)
+
+UPDATE [dbo].[nashville]
+SET owneraddress2 =   SUBSTRING(OwnerAddress, CHARINDEX(',', OwnerAddress) + 1, LEN(OwnerAddress))
+
+
+
+alter table [dbo].[nashville]
+DROP COLUMN address1;
+
+
+--change y and n to yes and no in "sold as vacant" field
+
+
+select soldasvacant
+from [dbo].[nashville]
+where SoldAsVacant like '%y%' 
+
+select distinct(SoldAsVacant), count(SoldAsVacant)
+from [dbo].[nashville]
+group by SoldAsVacant
+order by 2
+
+
+
+select SoldAsVacant
+, case when SoldAsVacant = 'y' then 'yes'
+when SoldAsVacant= 'n' then 'no'
+else SoldAsVacant
+end
+from [dbo].[nashville]
+
+update [dbo].[nashville]
+set SoldAsVacant = case when SoldAsVacant = 'y' then 'yes'
+when SoldAsVacant= 'n' then 'no'
+else SoldAsVacant
+end
+
+
+
+--remove duplicates 
+
+with rownumcte as (
+select *,
+ROW_NUMBER() over (
+partition by parcelid,
+             propertyaddress,
+			 saleprice,
+			 saledate,
+			 legalreference
+			  order by 
+			 uniqueid
+			 ) row_num
+from  [dbo].[nashville]
+--order by ParcelID
+)
+delete 
+from rownumcte
+where row_num> 1
+
+
+   --delete unused columns
+
+   select *
+   from nashville
+
+
+   alter table nashville
+   drop column owneraddress, taxdistrict, propertyaddress
+
+
+
+   alter table nashville
+   drop column saledate
+
